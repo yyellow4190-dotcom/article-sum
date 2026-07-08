@@ -1,1 +1,57 @@
 @import 'tailwindcss';
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: #d9cfbc;
+    color: #090806;
+    font-family: 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .font-poster {
+    font-family: Impact, 'Arial Black', 'Arial Narrow', sans-serif;
+    letter-spacing: 0;
+  }
+
+  .paper-grain {
+    background-image:
+      linear-gradient(rgba(9, 8, 6, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(9, 8, 6, 0.025) 1px, transparent 1px);
+    background-size: 18px 18px, 22px 22px;
+  }
+
+  .ui-copy {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 400;
+  }
+
+  .ui-copy .font-poster {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 400;
+    line-height: 1.35;
+  }
+
+  .ui-copy .font-black {
+    font-weight: 500;
+  }
+
+  .ui-copy .font-bold {
+    font-weight: 400;
+  }
+}

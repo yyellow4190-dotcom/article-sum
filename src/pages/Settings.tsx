@@ -7,8 +7,9 @@ import { usePipelineDefaults } from '../hooks/usePipelineDefaults'
 import { useSupabaseConfig } from '../hooks/useSupabaseConfig'
 
 const inputClass =
-  'bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500'
-const cardClass = 'bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex flex-col gap-3'
+  'bg-[#e9dfcb] border-2 border-[#090806] px-3 py-2 text-sm font-black text-[#090806] placeholder:text-[#090806]/55 focus:outline-none'
+const cardClass =
+  'bg-[#d9cfbc] border-2 border-[#090806] p-4 flex flex-col gap-3'
 
 export default function Settings() {
   const { keys, updateKey } = useApiKeys()
@@ -42,31 +43,31 @@ export default function Settings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="text-lg font-semibold text-slate-200">Settings</h2>
+      <h2 className="border-b-2 border-[#090806] pb-1 font-poster text-6xl uppercase leading-none text-[#090806]">Profile</h2>
 
       {defaults && (
         <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-slate-200">Pipeline defaults</h2>
+          <h2 className="font-poster text-4xl uppercase leading-none text-[#090806]">Pipeline Defaults</h2>
           <section className={`${cardClass} flex-row flex-wrap items-center gap-x-6 gap-y-3`}>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm font-black uppercase text-[#090806]">
               <input
                 type="checkbox"
                 checked={defaults.defaultOptions.emoji}
                 onChange={(e) => handleOptionsChange({ ...defaults.defaultOptions, emoji: e.target.checked })}
-                className="accent-indigo-500"
+                className="accent-[#11100d]"
               />
               Add emojis
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm font-black uppercase text-[#090806]">
               <input
                 type="checkbox"
                 checked={defaults.defaultOptions.kidFriendly}
                 onChange={(e) => handleOptionsChange({ ...defaults.defaultOptions, kidFriendly: e.target.checked })}
-                className="accent-indigo-500"
+                className="accent-[#11100d]"
               />
               Kid-friendly (simple words)
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm font-black uppercase text-[#090806]">
               Summary language
               <select
                 value={defaults.defaultOptions.language}
@@ -82,7 +83,7 @@ export default function Settings() {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-300 ml-auto">
+            <label className="ml-auto flex items-center gap-2 text-sm font-black uppercase text-[#090806]">
               Provider
               <select
                 value={defaults.defaultProvider}
@@ -98,7 +99,7 @@ export default function Settings() {
             </label>
           </section>
 
-          <h2 className="text-lg font-semibold text-slate-200">Categories</h2>
+          <h2 className="font-poster text-4xl uppercase leading-none text-[#090806]">Categories</h2>
           <div className={cardClass}>
             {defaults.categories.map((c, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -109,7 +110,7 @@ export default function Settings() {
                 />
                 <button
                   onClick={() => handleCategoryRemove(i)}
-                  className="text-xs text-red-400 hover:text-red-300 px-2"
+                  className="text-xs text-red-600 hover:text-red-500 px-2"
                 >
                   Remove
                 </button>
@@ -124,7 +125,7 @@ export default function Settings() {
               />
               <button
                 onClick={handleCategoryAdd}
-                className="text-xs bg-indigo-600 hover:bg-indigo-500 rounded-lg px-3 py-1.5 font-medium"
+                className="bg-[#090806] px-3 py-1.5 text-xs font-black uppercase text-[#e9dfcb] hover:bg-black"
               >
                 Add
               </button>
@@ -135,10 +136,10 @@ export default function Settings() {
 
       {supabaseConfig && (
         <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-slate-200">Database (Supabase)</h2>
+          <h2 className="font-poster text-4xl uppercase leading-none text-[#090806]">Database</h2>
           <div className={cardClass}>
             <div className="flex flex-col gap-2">
-              <label className="text-xs text-slate-500">Project URL</label>
+              <label className="text-xs font-black uppercase text-[#090806]">Project URL</label>
               <input
                 value={supabaseConfig.url}
                 onChange={(e) => updateSupabaseConfig({ url: e.target.value })}
@@ -147,7 +148,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-xs text-slate-500">Anon key</label>
+              <label className="text-xs font-black uppercase text-[#090806]">Anon Key</label>
               <input
                 type="password"
                 value={supabaseConfig.anonKey}
@@ -162,9 +163,9 @@ export default function Settings() {
       <div className="flex flex-col gap-4">
         {PROVIDERS.map((p) => (
           <div key={p.id} className={cardClass}>
-            <span className="text-sm font-medium text-slate-300">{p.label}</span>
+            <span className="font-poster text-4xl uppercase leading-none text-[#090806]">{p.label}</span>
             <div className="flex flex-col gap-2">
-              <label className="text-xs text-slate-500">API Key</label>
+              <label className="text-xs font-black uppercase text-[#090806]">API Key</label>
               <input
                 type="password"
                 placeholder={`${p.label} API Key`}
@@ -174,7 +175,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-xs text-slate-500">Model name</label>
+              <label className="text-xs font-black uppercase text-[#090806]">Model Name</label>
               <input
                 value={models[p.id]}
                 onChange={(e) => updateModel(p.id, e.target.value)}

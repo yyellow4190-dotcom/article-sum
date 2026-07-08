@@ -3,9 +3,10 @@ import type { ContentRecord } from '../types/global'
 import { usePipelineDefaults } from '../hooks/usePipelineDefaults'
 import { cachedImageSrc } from '../utils/imageCache'
 
-const cardClass = 'bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex flex-col gap-3'
+const cardClass =
+  'bg-[#d9cfbc] border-2 border-[#090806] p-4 flex flex-col gap-3'
 const inputClass =
-  'bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500'
+  'bg-[#e9dfcb] border-2 border-[#090806] px-3 py-2 text-sm font-black uppercase text-[#090806] focus:outline-none'
 
 export default function Pending() {
   const [records, setRecords] = useState<ContentRecord[] | null>(null)
@@ -38,14 +39,14 @@ export default function Pending() {
   }
 
   if (!window.api) {
-    return <p className="text-slate-500 text-sm">This feature is only available in the Electron app.</p>
+    return <p className="border-2 border-[#090806] bg-[#d9cfbc] p-4 font-poster text-3xl uppercase leading-none text-[#090806]">This feature is only available in the Electron app.</p>
   }
 
   return (
     <div className="flex flex-col gap-4">
       {defaults && (
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-500">Approve into folder</label>
+        <div className="flex items-center gap-3 border-b-2 border-[#090806] pb-4">
+          <label className="font-poster text-3xl uppercase leading-none text-[#090806]">Approve Folder</label>
           <select
             value={defaults.activeFolder ?? ''}
             onChange={(e) => updateActiveFolder(e.target.value || null)}
@@ -61,10 +62,10 @@ export default function Pending() {
         </div>
       )}
 
-      {records === null && <p className="text-slate-500 text-sm">Loading...</p>}
+      {records === null && <p className="font-poster text-3xl uppercase text-[#090806]">Loading...</p>}
 
       {records && records.length === 0 && (
-        <p className="text-slate-500 text-sm">No items pending approval. Try copying a link.</p>
+        <p className="border-2 border-[#090806] bg-[#d9cfbc] p-4 font-poster text-3xl uppercase leading-none text-[#090806]">No items pending approval. Try copying a link.</p>
       )}
 
       {records?.map((r) => {
@@ -73,33 +74,33 @@ export default function Pending() {
           <section key={r.id} className={cardClass}>
             <div className="flex items-center gap-2 flex-wrap">
               {r.data.processing ? (
-                <span className="inline-block text-xs px-2 py-1 rounded-full font-medium bg-slate-700">
+                <span className="inline-block bg-[#090806] px-2 py-1 text-xs font-black uppercase text-[#e9dfcb]">
                   {r.data.stage ?? 'Processing...'}
                 </span>
               ) : (
                 <span
-                  className={`inline-block text-xs px-2 py-1 rounded-full font-medium ${
-                    r.tag === 'Article' ? 'bg-indigo-600' : 'bg-slate-700'
+                  className={`inline-block px-2 py-1 text-xs font-black uppercase ${
+                    r.tag === 'Article' ? 'bg-[#090806] text-[#e9dfcb]' : 'border border-[#090806] text-[#090806]'
                   }`}
                 >
                   {r.tag}
                 </span>
               )}
               {r.data.category && (
-                <span className="inline-block bg-slate-800 text-xs px-2 py-1 rounded-full">{r.data.category}</span>
+                <span className="inline-block border border-[#090806] px-2 py-1 text-xs font-black uppercase text-[#090806]">{r.data.category}</span>
               )}
-              <span className="text-xs text-slate-600 ml-auto">{new Date(r.createdAt).toLocaleString('en-US')}</span>
+              <span className="ml-auto text-xs font-black uppercase text-[#090806]">{new Date(r.createdAt).toLocaleString('en-US')}</span>
             </div>
-            {r.data.title && <p className="text-sm font-semibold text-slate-100">{r.data.title}</p>}
-            <a href={r.url} target="_blank" rel="noreferrer" className="text-xs text-indigo-400 break-all hover:underline">
+            {r.data.title && <p className="font-poster text-4xl uppercase leading-none text-[#090806]">{r.data.title}</p>}
+            <a href={r.url} target="_blank" rel="noreferrer" className="break-all border-y-2 border-[#090806] py-2 text-xs font-black uppercase text-[#090806] hover:bg-[#e9dfcb]">
               {r.url}
             </a>
             {r.data.thumbnail && (
-              <img src={cachedImageSrc(r.data.thumbnail)} alt="" className="max-h-[200px] w-auto object-contain rounded-lg" />
+              <img src={cachedImageSrc(r.data.thumbnail)} alt="" className="max-h-[200px] w-auto border-2 border-[#090806] object-contain grayscale" />
             )}
-            {summary && <p className="whitespace-pre-wrap text-slate-200 leading-relaxed">{summary}</p>}
+            {summary && <p className="whitespace-pre-wrap border-t-2 border-[#090806] pt-3 text-sm font-bold leading-relaxed text-[#090806]">{summary}</p>}
             {r.data.error && (
-              <p className="text-red-400 text-sm bg-red-950/40 border border-red-900 rounded-lg px-3 py-2">
+              <p className="border-2 border-red-700 bg-red-50 px-3 py-2 text-sm font-black uppercase text-red-700">
                 {r.data.error}
               </p>
             )}
@@ -107,7 +108,7 @@ export default function Pending() {
               {r.data.original && (
                 <button
                   onClick={() => setFullTextRecord(r)}
-                  className="text-xs text-slate-400 hover:text-slate-200 px-3 py-1.5"
+                  className="px-3 py-1.5 text-xs font-black uppercase text-[#090806] hover:bg-[#e9dfcb]"
                 >
                   Show full article
                 </button>
@@ -115,7 +116,7 @@ export default function Pending() {
               {r.data.processing ? (
                 <button
                   onClick={() => handleCancel(r.id)}
-                  className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5"
+                  className="text-xs text-red-600 hover:text-red-500 px-3 py-1.5"
                 >
                   Cancel
                 </button>
@@ -123,13 +124,13 @@ export default function Pending() {
                 <>
                   <button
                     onClick={() => handleDiscard(r.id)}
-                    className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5"
+                    className="text-xs text-red-600 hover:text-red-500 px-3 py-1.5"
                   >
                     Discard
                   </button>
                   <button
                     onClick={() => handleApprove(r.id)}
-                    className="text-xs bg-indigo-600 hover:bg-indigo-500 rounded-lg px-3 py-1.5 font-medium"
+                    className="bg-[#090806] px-3 py-1.5 text-xs font-black uppercase text-[#e9dfcb] hover:bg-black"
                   >
                     Approve
                   </button>
@@ -142,28 +143,28 @@ export default function Pending() {
 
       {fullTextRecord && (
         <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-[#11100d]/35 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           onClick={() => setFullTextRecord(null)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-3 max-w-2xl w-full max-h-[80vh]"
+            className="flex max-h-[80vh] w-full max-w-2xl flex-col gap-3 border-2 border-[#090806] bg-[#e9dfcb] p-4 shadow-[12px_12px_0_#090806]"
           >
             <div className="flex items-center gap-2">
               <div className="flex flex-col min-w-0 flex-1 gap-0.5">
                 {fullTextRecord.data.title && (
-                  <span className="text-sm font-semibold text-slate-100 truncate">{fullTextRecord.data.title}</span>
+                  <span className="truncate font-poster text-3xl uppercase leading-none text-[#090806]">{fullTextRecord.data.title}</span>
                 )}
-                <span className="text-xs text-slate-500 break-all">{fullTextRecord.url}</span>
+                <span className="break-all text-xs font-black uppercase text-[#090806]">{fullTextRecord.url}</span>
               </div>
               <button
                 onClick={() => setFullTextRecord(null)}
-                className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 flex-shrink-0"
+                className="flex-shrink-0 border-2 border-[#090806] px-2 py-1 text-xs font-black uppercase hover:bg-[#090806] hover:text-[#e9dfcb]"
               >
                 Close
               </button>
             </div>
-            <p className="whitespace-pre-wrap text-slate-200 text-sm leading-relaxed overflow-y-auto">
+            <p className="overflow-y-auto whitespace-pre-wrap border-t-2 border-[#090806] pt-3 text-sm font-bold leading-relaxed text-[#090806]">
               {fullTextRecord.data.original}
             </p>
           </div>

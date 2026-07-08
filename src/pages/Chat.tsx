@@ -9,12 +9,12 @@ import { usePipelineDefaults } from '../hooks/usePipelineDefaults'
 import { cachedImageSrc } from '../utils/imageCache'
 
 const inputClass =
-  'bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500'
+  'bg-[#e9dfcb] border-2 border-[#090806] px-3 py-2 text-sm font-black uppercase text-[#090806] focus:outline-none'
 
 const markdownComponents: Components = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
   a: ({ children, href }) => (
-    <a href={href} target="_blank" rel="noreferrer" className="underline text-indigo-300 hover:text-indigo-200">
+    <a href={href} target="_blank" rel="noreferrer" className="underline text-[#090806] hover:text-black">
       {children}
     </a>
   ),
@@ -26,16 +26,16 @@ const markdownComponents: Components = {
   h2: ({ children }) => <p className="font-semibold text-base mb-1">{children}</p>,
   h3: ({ children }) => <p className="font-semibold mb-1">{children}</p>,
   blockquote: ({ children }) => (
-    <blockquote className="border-l-2 border-slate-500 pl-2 italic text-slate-300 mb-2 last:mb-0">{children}</blockquote>
+    <blockquote className="border-l-2 border-[#090806] pl-2 italic text-[#090806] mb-2 last:mb-0">{children}</blockquote>
   ),
   pre: ({ children }) => (
-    <pre className="bg-black/30 rounded-lg p-2 overflow-x-auto text-xs font-mono mb-2 last:mb-0">{children}</pre>
+    <pre className="bg-[#d9cfbc] border border-[#090806] p-2 overflow-x-auto text-xs font-mono mb-2 last:mb-0">{children}</pre>
   ),
   code: ({ className, children, ...rest }) => {
     const isInline = !className && !String(children).includes('\n')
     if (isInline) {
       return (
-        <code className="bg-black/30 rounded px-1 py-0.5 text-xs font-mono" {...rest}>
+        <code className="bg-[#d9cfbc] border border-[#090806] px-1 py-0.5 text-xs font-mono" {...rest}>
           {children}
         </code>
       )
@@ -181,14 +181,14 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
   }
 
   if (!window.api) {
-    return <p className="text-slate-500 text-sm p-6">This feature is only available in the Electron app.</p>
+    return <p className="border-2 border-[#090806] bg-[#d9cfbc] p-4 font-poster text-3xl uppercase leading-none text-[#090806]">This feature is only available in the Electron app.</p>
   }
 
   return (
     <div className="h-full flex">
-      <aside className="w-[26%] max-w-xs min-w-[220px] border-r border-slate-800 bg-slate-900/50 flex flex-col overflow-y-auto">
+      <aside className="w-[28%] max-w-xs min-w-[220px] border-r-2 border-[#090806] bg-[#c8bca9] flex flex-col overflow-y-auto">
         {sidebarIds.length === 0 && (
-          <p className="text-slate-500 text-xs p-4">
+          <p className="p-4 text-xs font-black uppercase text-[#090806]">
             Start a chat by clicking "Chat with this article" in Archive.
           </p>
         )}
@@ -199,8 +199,8 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
           return (
             <div
               key={id}
-              className={`relative flex items-center gap-1 border-b border-slate-800/60 transition-colors ${
-                isActive ? 'bg-indigo-600/20' : 'hover:bg-slate-800/60'
+              className={`relative flex items-center gap-1 border-b-2 border-[#090806] transition-colors ${
+                isActive ? 'bg-[#e9dfcb]' : 'hover:bg-[#d9cfbc]'
               }`}
             >
               <button onClick={() => openSession(id)} className="flex items-center gap-3 p-3 text-left flex-1 min-w-0">
@@ -208,14 +208,14 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
                   <img
                     src={cachedImageSrc(article.data.thumbnail)}
                     alt=""
-                    className="h-10 w-10 object-cover rounded-lg flex-shrink-0"
+                    className="h-10 w-10 object-cover flex-shrink-0 border border-[#090806]"
                   />
                 ) : (
-                  <div className="h-10 w-10 rounded-lg bg-slate-800 flex-shrink-0" />
+                  <div className="h-10 w-10 border border-[#090806] bg-[#bfb5a6] flex-shrink-0" />
                 )}
                 <div className="flex flex-col min-w-0 flex-1 gap-0.5">
                   <span className="text-sm font-medium truncate">{article.data.title ?? article.data.category ?? 'Article'}</span>
-                  <span className="text-xs text-slate-500 truncate">{summary?.lastMessage ?? article.url}</span>
+                  <span className="truncate text-xs font-bold text-[#090806]">{summary?.lastMessage ?? article.url}</span>
                 </div>
               </button>
               <button
@@ -223,17 +223,17 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
                   e.stopPropagation()
                   setOpenMenuId((prev) => (prev === id ? null : id))
                 }}
-                className="text-slate-500 hover:text-slate-200 px-2 py-1 text-sm flex-shrink-0 mr-1"
+                className="mr-1 flex-shrink-0 px-2 py-1 text-sm font-black text-[#090806] hover:bg-[#090806] hover:text-[#e9dfcb]"
               >
                 ⋯
               </button>
               {openMenuId === id && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                  <div className="absolute right-2 top-10 z-20 bg-slate-800 border border-slate-700 rounded-lg shadow-lg overflow-hidden">
+                  <div className="absolute right-2 top-10 z-20 overflow-hidden border-2 border-[#090806] bg-[#e9dfcb] shadow-[6px_6px_0_#090806]">
                     <button
                       onClick={() => handleDeleteSession(id)}
-                      className="block w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-slate-700 whitespace-nowrap"
+                      className="block w-full text-left px-3 py-2 text-xs text-red-700 hover:bg-red-50 whitespace-nowrap"
                     >
                       Delete conversation
                     </button>
@@ -248,16 +248,16 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
       <section className="flex-1 flex flex-col min-w-0">
         {selectedArticle ? (
           <>
-            <header className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b-2 border-indigo-500/50 shadow-[0_4px_16px_-6px_rgba(99,102,241,0.4)] flex-wrap">
+            <header className="shrink-0 flex items-center justify-between gap-3 px-5 py-3 border-b-2 border-[#090806] flex-wrap">
               <div className="flex flex-col min-w-0 gap-0.5">
                 {selectedArticle.data.title && (
-                  <span className="text-sm font-semibold text-slate-100 truncate">{selectedArticle.data.title}</span>
+                  <span className="truncate font-poster text-3xl uppercase leading-none text-[#090806]">{selectedArticle.data.title}</span>
                 )}
                 <a
                   href={selectedArticle.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-indigo-400 truncate hover:underline"
+                  className="text-xs font-black uppercase text-[#090806] truncate hover:underline"
                 >
                   {selectedArticle.url}
                 </a>
@@ -275,12 +275,12 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
               </select>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
               {displayMessages.map((m, i) => (
                 <div
                   key={i}
-                  className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
-                    m.role === 'user' ? 'self-end bg-indigo-600 text-white' : 'self-start bg-slate-800 text-slate-100'
+                  className={`max-w-[75%] px-4 py-2 text-sm font-bold leading-relaxed ${
+                    m.role === 'user' ? 'self-end bg-[#090806] text-[#e9dfcb]' : 'self-start border-2 border-[#090806] bg-[#d9cfbc] text-[#090806]'
                   }`}
                 >
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
@@ -289,7 +289,7 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
                 </div>
               ))}
               {sending && (
-                <div className="self-start max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed bg-slate-800 text-slate-100">
+                <div className="self-start max-w-[75%] border-2 border-[#090806] bg-[#d9cfbc] px-4 py-2 text-sm leading-relaxed text-[#090806]">
                   {streamingText ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
                       {streamingText}
@@ -300,7 +300,7 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
                 </div>
               )}
               {error && (
-                <p className="self-start text-xs text-red-400 bg-red-950/40 border border-red-900 rounded-lg px-3 py-2">
+                <p className="self-start border-2 border-red-700 bg-red-50 px-3 py-2 text-xs font-black uppercase text-red-700">
                   {error}
                 </p>
               )}
@@ -308,22 +308,22 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
             </div>
 
             <div className="shrink-0 p-4">
-              <div className="max-w-2xl mx-auto flex items-end gap-2 bg-slate-900 border border-slate-700 rounded-3xl px-4 py-2">
+              <div className="mx-auto flex max-w-2xl items-end gap-2 border-2 border-[#090806] bg-[#e9dfcb] px-4 py-2">
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask a question about the article..."
                   rows={1}
-                  className="flex-1 bg-transparent resize-none max-h-32 py-1.5 text-sm focus:outline-none placeholder:text-slate-500"
+                  className="max-h-32 flex-1 resize-none bg-transparent py-1.5 text-sm font-bold focus:outline-none placeholder:text-[#090806]/55"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!draft.trim() || sending}
-                  className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  className={`shrink-0 px-4 py-1.5 text-sm font-black uppercase transition-colors ${
                     draft.trim() && !sending
-                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                      : 'bg-slate-800 text-slate-600'
+                      ? 'bg-[#090806] hover:bg-black text-[#e9dfcb]'
+                      : 'border-2 border-[#090806] text-[#090806]/45'
                   }`}
                 >
                   Send
@@ -332,7 +332,7 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
             </div>
           </>
         ) : (
-          <p className="text-slate-500 text-sm p-6">Select a conversation on the left.</p>
+          <p className="p-6 font-poster text-3xl uppercase leading-none text-[#090806]">Select a conversation on the left.</p>
         )}
       </section>
     </div>
