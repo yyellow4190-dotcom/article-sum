@@ -1,66 +1,20 @@
 const { createClient } = require('@supabase/supabase-js')
 const settingsStore = require('./settingsStore')
-const { SUPABASE_URL, SUPABASE_ANON_KEY } = require('./config')
 
 let client = null
-
-// Main process has no localStorage, so the auth session (refresh token) is
-// persisted through settingsStore instead — same plaintext handling as the anon key.
-const authStorageAdapter = {
-  getItem: (key) => settingsStore.getSettings().authStorage?.[key] ?? null,
-  setItem: (key, value) => {
-    const { authStorage } = settingsStore.getSettings()
-    settingsStore.updateSettings({ authStorage: { ...authStorage, [key]: value } })
-  },
-  removeItem: (key) => {
-    const { authStorage } = settingsStore.getSettings()
-    const next = { ...authStorage }
-    delete next[key]
-    settingsStore.updateSettings({ authStorage: next })
-  },
-}
+let clientKey = null
 
 function getClient() {
-  if (!client) {
-    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { storage: authStorageAdapter, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
-    })
+  const { supabase } = settingsStore.getSettings()
+  if (!supabase?.url || !supabase?.anonKey) {
+    throw new Error('Supabase is not configured. Set the project URL and anon key in Settings.')
+  }
+  const key = `${supabase.url}|${supabase.anonKey}`
+  if (!client || clientKey !== key) {
+    client = createClient(supabase.url, supabase.anonKey)
+    clientKey = key
   }
   return client
-}
-
-function rowToUser(user) {
-  return user ? { id: user.id, email: user.email ?? null } : null
-}
-
-async function signUp(email, password) {
-  const { data, error } = await getClient().auth.signUp({ email, password })
-  if (error) throw error
-  return rowToUser(data.user)
-}
-
-async function signIn(email, password) {
-  const { data, error } = await getClient().auth.signInWithPassword({ email, password })
-  if (error) throw error
-  return rowToUser(data.user)
-}
-
-async function signOut() {
-  const { error } = await getClient().auth.signOut()
-  if (error) throw error
-}
-
-async function getUser() {
-  const { data, error } = await getClient().auth.getSession()
-  if (error) throw error
-  return rowToUser(data.session?.user ?? null)
-}
-
-function onAuthStateChange(callback) {
-  const {
-    data: { subscription },
-  } = getClient().auth.onAuthStateChange((_event, session) => callback(rowToUser(session?.user ?? null)))
-  return () => subscription.unsubscribe()
 }
 
 function rowToRecord(row) {
@@ -84,20 +38,13 @@ async function insertContent({ url, tag, data }) {
   return row.id
 }
 
-async function updateContent(id, { tag, data, embedding }) {
+async function updateContent(id, { tag, data }) {
   const patch = {}
   if (tag !== undefined) patch.tag = tag
   if (data !== undefined) patch.data = data
-  if (embedding !== undefined) patch.embedding = embedding
   if (Object.keys(patch).length === 0) return
   const { error } = await getClient().from('contents').update(patch).eq('id', id)
   if (error) throw error
-}
-
-async function getRelated(id) {
-  const { data, error } = await getClient().rpc('match_contents', { source_id: id })
-  if (error) throw error
-  return data.map(rowToRecord)
 }
 
 async function listByStatus(status) {
@@ -108,16 +55,6 @@ async function listByStatus(status) {
     .order('id', { ascending: status === 'pending' })
   if (error) throw error
   return data.map(rowToRecord)
-}
-
-async function getContent(id) {
-  const { data, error } = await getClient()
-    .from('contents')
-    .select('id, url, tag, status, data, created_at')
-    .eq('id', id)
-    .single()
-  if (error) throw error
-  return rowToRecord(data)
 }
 
 async function approve(id, folder) {
@@ -150,19 +87,4 @@ async function resetStuckJobs() {
   }
 }
 
-module.exports = {
-  getClient,
-  insertContent,
-  updateContent,
-  getContent,
-  getRelated,
-  listByStatus,
-  approve,
-  discard,
-  resetStuckJobs,
-  signUp,
-  signIn,
-  signOut,
-  getUser,
-  onAuthStateChange,
-}
+module.exports = { insertContent, updateContent, listByStatus, approve, discard, resetStuckJobs }

@@ -1,6 +1,22 @@
 export type Category = string
 
-export type Provider = 'claude'
+export type Provider = 'claude' | 'gemini' | 'openai' | 'nvidia'
+
+export const PROVIDERS: { id: Provider; label: string }[] = [
+  { id: 'claude', label: 'Claude' },
+  { id: 'gemini', label: 'Gemini' },
+  { id: 'openai', label: 'OpenAI' },
+  { id: 'nvidia', label: 'NVIDIA NIM' },
+]
+
+export interface ApiKeys {
+  claude: string
+  gemini: string
+  openai: string
+  nvidia: string
+}
+
+export type Models = Record<Provider, string>
 
 export type Language = 'ko' | 'en' | 'ja' | 'zh'
 
@@ -21,4 +37,3 @@ export interface SummaryResult {
   category: Category
   summary: string
 }
-

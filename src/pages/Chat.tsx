@@ -3,7 +3,13 @@ import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import type { ChatMessage, ChatSession, ChatSessionSummary, ContentRecord } from '../types/global'
+import type { Provider } from '../types'
+import { PROVIDERS } from '../types'
+import { usePipelineDefaults } from '../hooks/usePipelineDefaults'
 import { cachedImageSrc } from '../utils/imageCache'
+
+const inputClass =
+  'bg-[#e9dfcb] border-2 border-[#090806] px-3 py-2 text-sm font-black uppercase text-[#090806] focus:outline-none'
 
 const markdownComponents: Components = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
@@ -52,7 +58,9 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [provider, setProvider] = useState<Provider>('claude')
   const [openMenuId, setOpenMenuId] = useState<number | null>(null)
+  const { defaults } = usePipelineDefaults()
 
   const selectedIdRef = useRef(selectedId)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -61,27 +69,9 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
     window.api?.chatListSessions().then(setSessionSummaries)
   }
 
-  function refresh() {
+  useEffect(() => {
     window.api?.listApproved().then(setArticles)
     refreshSessionList()
-    if (selectedIdRef.current != null) {
-      window.api?.chatGetSession(selectedIdRef.current).then(setSession)
-    }
-  }
-
-  useEffect(() => {
-    refresh()
-  }, [])
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'F5') {
-        e.preventDefault()
-        refresh()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   useEffect(() => {
@@ -123,7 +113,9 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialContentId])
 
-
+  useEffect(() => {
+    setProvider(session?.provider ?? defaults?.defaultProvider ?? 'claude')
+  }, [session, defaults])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: 'end' })
@@ -161,6 +153,7 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
     try {
       await window.api?.chatSend(selectedId, {
         text,
+        provider,
         articleText: selectedArticle.data.original ?? '',
       })
     } catch (e) {
@@ -211,9 +204,9 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
               }`}
             >
               <button onClick={() => openSession(id)} className="flex items-center gap-3 p-3 text-left flex-1 min-w-0">
-                {article.data.images?.[0] ? (
+                {article.data.thumbnail ? (
                   <img
-                    src={cachedImageSrc(article.data.images[0])}
+                    src={cachedImageSrc(article.data.thumbnail)}
                     alt=""
                     className="h-10 w-10 object-cover flex-shrink-0 border border-[#090806]"
                   />
@@ -269,6 +262,17 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
                   {selectedArticle.url}
                 </a>
               </div>
+              <select
+                value={provider}
+                onChange={(e) => setProvider(e.target.value as Provider)}
+                className={inputClass}
+              >
+                {PROVIDERS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
             </header>
 
             <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">

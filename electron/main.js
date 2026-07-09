@@ -1,35 +1,28 @@
-const { app, BrowserWindow, clipboard, ipcMain, protocol, Menu, screen, shell } = require('electron')
+const { app, BrowserWindow, clipboard, ipcMain, protocol, Menu, screen } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
 const settingsStore = require('./settingsStore')
 const db = require('./db')
 const chatStore = require('./chatStore')
 const imageCache = require('./imageCache')
-const { streamChat } = require('./llm')
+const { summarizeArticle, streamChat } = require('./llm')
 
+const SIDECAR_PORT = 8787
+const SIDECAR_URL = `http://127.0.0.1:${SIDECAR_PORT}`
 const URL_RE = /^https?:\/\/\S+$/i
-
-function getBackendUrl() {
-  const url = settingsStore.getSettings().backendUrl || 'http://127.0.0.1:3000'
-  return url.replace(/\/+$/, '')
-}
-
-function getBackendPort() {
-  const url = getBackendUrl()
-  const match = url.match(/:(\d+)/)
-  return match ? parseInt(match[1], 10) : 3000
-}
+const CLIPBOARD_POLL_MS = 1500
+const SIDECAR_RETRY_DELAY_MS = 5000
+const SIDECAR_MAX_RETRIES = 5
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'appimg', privileges: { standard: true, supportFetchAPI: true, stream: true, bypassCSP: true } },
 ])
 
 let sidecarProcess = null
-let mainWindow = null
 let lastClipboardText = ''
+let mainWindow = null
 let overlayWindow = null
 let overlayJobCount = 0
-let isAuthenticated = false
 const activeJobs = new Map()
 
 async function ensureOverlayWindow() {
@@ -89,14 +82,44 @@ function computeOptionKey(options) {
   return parts.length ? parts.join('_') : 'default'
 }
 
-function startBackend() {
+function startSidecar() {
   const pythonBin = process.platform === 'win32' ? 'python' : 'python3'
-  const port = getBackendPort()
-  sidecarProcess = spawn(pythonBin, ['-m', 'uvicorn', 'main:app', '--port', String(port)], {
-    cwd: path.join(__dirname, '..', '..', 'article-sum-back'),
+  sidecarProcess = spawn(pythonBin, ['-m', 'uvicorn', 'main:app', '--port', String(SIDECAR_PORT)], {
+    cwd: path.join(__dirname, '..', 'python-sidecar'),
     stdio: 'ignore',
   })
-  sidecarProcess.on('error', (e) => console.error('[backend] failed to start:', e))
+  sidecarProcess.on('error', (e) => console.error('[sidecar] failed to start:', e))
+}
+
+async function crawl(url, signal) {
+  try {
+    const res = await fetch(`${SIDECAR_URL}/crawl`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+      signal: AbortSignal.any([AbortSignal.timeout(30_000), signal]),
+    })
+    if (!res.ok) return { success: false, text: null }
+    return await res.json()
+  } catch (e) {
+    console.error('[crawl] sidecar unreachable:', e)
+    // 앱 시작 직후에는 python sidecar 가 아직 뜨는 중이라 ECONNREFUSED 가 날 수 있다.
+    // 이 경우만 별도 표시해서 processLink 에서 잠깐 재시도하게 한다.
+    const unreachable = e?.cause?.code === 'ECONNREFUSED'
+    return { success: false, text: null, unreachable }
+  }
+}
+
+async function crawlWithRetry(url, signal) {
+  let result = await crawl(url, signal)
+  let attempt = 0
+  while (result.unreachable && attempt < SIDECAR_MAX_RETRIES && !signal.aborted) {
+    await new Promise((resolve) => setTimeout(resolve, SIDECAR_RETRY_DELAY_MS))
+    if (signal.aborted) break
+    attempt++
+    result = await crawl(url, signal)
+  }
+  return result
 }
 
 function broadcastQueueUpdate() {
@@ -108,12 +131,6 @@ function broadcastQueueUpdate() {
 function broadcastChatEvent(payload) {
   for (const win of BrowserWindow.getAllWindows()) {
     win.webContents.send('chat:event', payload)
-  }
-}
-
-function broadcastAuthChange(user) {
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send('auth:changed', user)
   }
 }
 
@@ -131,48 +148,40 @@ async function processLink(url) {
   const controller = new AbortController()
   activeJobs.set(id, controller)
   let tag = 'Article'
-  let embedding
 
   showOverlay('✨ Analyzing link...')
 
   try {
-    const settings = settingsStore.getSettings()
-
-    setOverlayText('✨ Summarizing article...').catch((e) => console.error('[overlay] update failed:', e))
-
-    const res = await fetch(`${getBackendUrl()}/process`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url,
-        options: settings.defaultOptions,
-        categories: settings.categories,
-      }),
-      signal: AbortSignal.any([AbortSignal.timeout(60_000), controller.signal]),
-    })
-
-    if (!res.ok) throw new Error(`Backend process failed: ${res.statusText}`)
-    const result = await res.json()
-
+    const { success, text, image, title } = await crawlWithRetry(url, controller.signal)
     if (controller.signal.aborted) return
 
-    if (!result.success || !result.text) {
+    if (!success || !text) {
       tag = 'Not Article'
       return
     }
 
-    data.original = result.text
-    data.images = result.images ?? []
-    data.title = result.title ?? null
+    data.original = text
+    data.thumbnail = image ?? null
+    data.title = title ?? null
     data.summaries = {}
-    if (result.error) {
-      data.error = result.error
-    } else {
-      data.category = result.category
-      data.summaries[computeOptionKey(settings.defaultOptions)] = result.summary
-    }
+    data.stage = 'Summarizing...'
+    await db.updateContent(id, { data })
+    broadcastQueueUpdate()
 
-    // OpenAI provider가 제거되어 임베딩 키가 없으므로 임베딩 생성 시도를 생략함
+    setOverlayText('✨ Summarizing article...').catch((e) => console.error('[overlay] update failed:', e))
+
+    const settings = settingsStore.getSettings()
+    const { category, summary } = await summarizeArticle(
+      text,
+      settings.defaultOptions,
+      settings.defaultProvider,
+      settings.models[settings.defaultProvider],
+      settings.apiKeys,
+      controller.signal,
+      settings.categories
+    )
+    data.category = category
+    data.summaries[computeOptionKey(settings.defaultOptions)] = summary
   } catch (e) {
     if (controller.signal.aborted) return
     console.error('[processLink] failed:', e)
@@ -182,7 +191,7 @@ async function processLink(url) {
     if (!controller.signal.aborted) {
       data.processing = false
       delete data.stage
-      await db.updateContent(id, { tag, data, embedding })
+      await db.updateContent(id, { tag, data })
       broadcastQueueUpdate()
     }
     activeJobs.delete(id)
@@ -190,20 +199,19 @@ async function processLink(url) {
 }
 
 function watchClipboard() {
-  lastClipboardText = clipboard.readText().trim()
+  lastClipboardText = clipboard.readText()
   setInterval(() => {
     const text = clipboard.readText().trim()
     if (!text || text === lastClipboardText) return
     lastClipboardText = text
-    if (isAuthenticated && URL_RE.test(text)) processLink(text)
-  }, 100)
+    if (URL_RE.test(text)) processLink(text)
+  }, CLIPBOARD_POLL_MS)
 }
 
 function registerIpcHandlers() {
   ipcMain.handle('settings:get', () => settingsStore.getSettings())
   ipcMain.handle('settings:sync', (_event, partial) => settingsStore.updateSettings(partial))
   ipcMain.handle('contents:list', (_event, status) => db.listByStatus(status))
-  ipcMain.handle('contents:related', (_event, id) => db.getRelated(id))
   ipcMain.handle('contents:approve', async (_event, id) => {
     const { activeFolder } = settingsStore.getSettings()
     await db.approve(id, activeFolder)
@@ -211,7 +219,7 @@ function registerIpcHandlers() {
   })
   ipcMain.handle('contents:discard', async (_event, id) => {
     await db.discard(id)
-    await chatStore.deleteSession(id)
+    chatStore.deleteSession(id)
     broadcastQueueUpdate()
   })
   ipcMain.handle('contents:cancel', async (_event, id) => {
@@ -219,78 +227,26 @@ function registerIpcHandlers() {
     await db.discard(id)
     broadcastQueueUpdate()
   })
-  ipcMain.handle('contents:regenerate', async (_event, id) => {
-    try {
-      const record = await db.getContent(id)
-      if (!record.data || !record.data.original) {
-        throw new Error('Original article text is missing. Cannot regenerate.')
-      }
-
-      const settings = settingsStore.getSettings()
-
-      record.data.processing = true
-      record.data.stage = 'Regenerating summary...'
-      await db.updateContent(id, { data: record.data })
-      broadcastQueueUpdate()
-
-      const res = await fetch(`${getBackendUrl()}/summarize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: record.data.original,
-          options: settings.defaultOptions,
-          categories: settings.categories,
-        }),
-      })
-
-      if (!res.ok) throw new Error(`Backend summarize failed: ${res.statusText}`)
-      const result = await res.json()
-
-      if (!result.success) {
-        throw new Error(result.error || 'Summarization failed')
-      }
-
-      record.data.category = result.category
-      record.data.summaries = record.data.summaries || {}
-      record.data.summaries[computeOptionKey(settings.defaultOptions)] = result.summary
-      record.data.processing = false
-      delete record.data.stage
-      delete record.data.error
-
-      await db.updateContent(id, { data: record.data })
-      broadcastQueueUpdate()
-    } catch (e) {
-      console.error('[contents:regenerate] failed:', e)
-      try {
-        const record = await db.getContent(id)
-        record.data.processing = false
-        delete record.data.stage
-        record.data.error = e instanceof Error ? e.message : String(e)
-        await db.updateContent(id, { data: record.data })
-        broadcastQueueUpdate()
-      } catch (innerErr) {
-        console.error('[contents:regenerate] error fallback failed:', innerErr)
-      }
-    }
-  })
-
-  ipcMain.handle('auth:signUp', (_event, email, password) => db.signUp(email, password))
-  ipcMain.handle('auth:signIn', (_event, email, password) => db.signIn(email, password))
-  ipcMain.handle('auth:signOut', () => db.signOut())
-  ipcMain.handle('auth:getUser', () => db.getUser())
 
   ipcMain.handle('chat:get', (_event, contentId) => chatStore.getSession(contentId))
   ipcMain.handle('chat:list', () => chatStore.listSessions())
   ipcMain.handle('chat:delete', (_event, contentId) => chatStore.deleteSession(contentId))
-  ipcMain.handle('chat:send', async (_event, contentId, { text, articleText }) => {
-    await chatStore.appendMessage(contentId, { role: 'user', content: text, createdAt: new Date().toISOString() })
+  ipcMain.handle('chat:send', async (_event, contentId, { text, provider, articleText }) => {
+    chatStore.appendMessage(contentId, { role: 'user', content: text, createdAt: new Date().toISOString() })
+    chatStore.setProvider(contentId, provider)
 
-    const session = await chatStore.getSession(contentId)
+    const settings = settingsStore.getSettings()
+    const session = chatStore.getSession(contentId)
     try {
-      const reply = await streamChat(getBackendUrl(), articleText, session.messages, (chunk) =>
-        broadcastChatEvent({ type: 'chunk', contentId, chunk })
+      const reply = await streamChat(
+        provider,
+        articleText,
+        session.messages,
+        settings.models[provider],
+        settings.apiKeys,
+        (chunk) => broadcastChatEvent({ type: 'chunk', contentId, chunk })
       )
-      await chatStore.appendMessage(contentId, { role: 'assistant', content: reply, createdAt: new Date().toISOString() })
+      chatStore.appendMessage(contentId, { role: 'assistant', content: reply, createdAt: new Date().toISOString() })
       broadcastChatEvent({ type: 'done', contentId })
     } catch (e) {
       console.error('[chat:send] failed:', e)
@@ -311,11 +267,6 @@ function createWindow() {
     },
   })
 
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
-    return { action: 'deny' }
-  })
-
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
   } else {
@@ -324,37 +275,17 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  const template = [
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' }
-      ]
-    }
-  ]
-  const menu = Menu.buildFromTemplate(template)
-  Menu.setApplicationMenu(menu)
-
+  Menu.setApplicationMenu(null)
   protocol.handle('appimg', imageCache.fetchImage)
   registerIpcHandlers()
-  startBackend()
-  try {
-    db.onAuthStateChange((user) => {
-      isAuthenticated = !!user
-      broadcastAuthChange(user)
-    })
-  } catch (e) {
-    console.error('[auth] failed to subscribe:', e.message)
-  }
+  startSidecar()
   await db.resetStuckJobs().catch((e) => console.error('[db] resetStuckJobs failed:', e.message))
   createWindow()
   watchClipboard()
+
+  // setTimeout(()=>{
+  // processLink(`https://www.koreaherald.com/article/10802438`)
+  // }, 5000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

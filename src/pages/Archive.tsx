@@ -7,16 +7,11 @@ const cardClass =
 const inputClass =
   'bg-[#e9dfcb] border-2 border-[#090806] px-3 py-3 font-poster text-3xl uppercase leading-none text-[#090806] placeholder:text-[#090806]/55 focus:outline-none'
 
-export default function Archive({
-  onChatWithArticle,
-  onOpenArticle,
-}: {
-  onChatWithArticle: (id: number) => void
-  onOpenArticle: (record: ContentRecord) => void
-}) {
+export default function Archive({ onChatWithArticle }: { onChatWithArticle: (id: number) => void }) {
   const [records, setRecords] = useState<ContentRecord[] | null>(null)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set())
+  const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [fullTextRecord, setFullTextRecord] = useState<ContentRecord | null>(null)
 
   function refresh() {
@@ -27,16 +22,20 @@ export default function Archive({
     refresh()
   }, [])
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'F5') {
-        e.preventDefault()
-        refresh()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  async function handleDelete(id: number) {
+    if (!window.confirm('Delete this item?')) return
+    await window.api?.discard(id)
+    refresh()
+  }
+
+  function toggleExpanded(id: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   function toggleCategoryFilter(category: string) {
     setCategoryFilter((prev) => {
@@ -119,50 +118,30 @@ export default function Archive({
           <h3 className="border-b-2 border-[#090806] pb-1 font-poster text-5xl uppercase leading-none text-[#090806]">{folder}</h3>
           {groups.get(folder)!.map((r) => {
             const summary = r.data.summaries ? Object.values(r.data.summaries)[0] : undefined
+            const isExpanded = expanded.has(r.id)
 
-            return (
-              <section
-                key={r.id}
-                onClick={() => !r.data.processing && onOpenArticle(r)}
-                className={`${cardClass} cursor-pointer p-2 transition-colors hover:bg-[#e9dfcb] ${
-                  r.data.processing ? 'opacity-50 pointer-events-none' : ''
-                }`}
-              >
+            if (!isExpanded) {
+              return (
+                <section
+                  key={r.id}
+                  onClick={() => toggleExpanded(r.id)}
+                  className={`${cardClass} cursor-pointer p-2 transition-colors hover:bg-[#e9dfcb]`}
+                >
                   <div className="flex flex-row items-center gap-3">
-                    {r.data.images?.[0] ? (
-                      <div className="relative isolate h-16 w-16 flex-shrink-0">
-                        {r.data.images.length > 1 && (
-                          <>
-                            <div className="absolute inset-0 -z-20 rotate-[16deg] border-2 border-[#090806] bg-[#c8bca9]" />
-                            <div className="absolute inset-0 -z-10 rotate-[8deg] border-2 border-[#090806] bg-[#d9cfbc]" />
-                          </>
-                        )}
-                        <img
-                          src={cachedImageSrc(r.data.images[0])}
-                          alt=""
-                          className="relative h-16 w-16 border-2 border-[#090806] object-cover grayscale"
-                        />
-                      </div>
+                    {r.data.thumbnail ? (
+                      <img src={cachedImageSrc(r.data.thumbnail)} alt="" className="h-16 w-16 flex-shrink-0 border-2 border-[#090806] object-cover grayscale" />
                     ) : (
                         <div className="h-16 w-16 flex-shrink-0 border-2 border-[#090806] bg-[#c8bca9]" />
                     )}
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {r.data.processing ? (
-                          <span className="inline-block animate-pulse bg-[#090806] px-2 py-1 text-xs font-black uppercase text-[#e9dfcb]">
-                            {r.data.stage ?? 'Processing...'}
-                          </span>
-                        ) : (
-                          <span
-                            className={`inline-block px-2 py-1 text-xs font-black uppercase ${
-                              r.tag === 'Article'
-                                ? 'bg-[#090806] text-[#e9dfcb]'
-                                : 'border border-[#090806] text-[#090806]'
-                            }`}
-                          >
-                            {r.tag}
-                          </span>
-                        )}
+                        <span
+                          className={`inline-block px-2 py-1 text-xs font-black uppercase ${
+                            r.tag === 'Article' ? 'bg-[#090806] text-[#e9dfcb]' : 'border border-[#090806] text-[#090806]'
+                          }`}
+                        >
+                          {r.tag}
+                        </span>
                         {r.data.category && (
                           <span className="inline-block border border-[#090806] px-2 py-1 text-xs font-black uppercase text-[#090806]">{r.data.category}</span>
                         )}
@@ -200,6 +179,76 @@ export default function Archive({
                   </div>
                 </section>
               )
+            }
+
+            return (
+              <section key={r.id} className={cardClass}>
+                <div
+                  onClick={() => toggleExpanded(r.id)}
+                  className="flex items-center gap-2 flex-wrap cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <span className="font-poster text-2xl text-[#090806]">▾</span>
+                  <span
+                    className={`inline-block px-2 py-1 text-xs font-black uppercase ${
+                      r.tag === 'Article' ? 'bg-[#090806] text-[#e9dfcb]' : 'border border-[#090806] text-[#090806]'
+                    }`}
+                  >
+                    {r.tag}
+                  </span>
+                  {r.data.category && (
+                    <span className="inline-block border border-[#090806] px-2 py-1 text-xs font-black uppercase text-[#090806]">{r.data.category}</span>
+                  )}
+                  <span className="ml-auto text-xs font-black uppercase text-[#090806]">{new Date(r.createdAt).toLocaleString('en-US')}</span>
+                </div>
+                {r.data.title && <p className="font-poster text-4xl uppercase leading-none text-[#090806]">{r.data.title}</p>}
+                {r.data.thumbnail && (
+                  <img src={cachedImageSrc(r.data.thumbnail)} alt="" className="max-h-[200px] w-auto border-2 border-[#090806] object-contain grayscale" />
+                )}
+                {summary && <p className="whitespace-pre-wrap border-t-2 border-[#090806] pt-3 text-sm font-bold leading-relaxed text-[#090806]">{summary}</p>}
+                <div className="flex justify-end gap-2">
+                  {r.data.original && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onChatWithArticle(r.id)
+                      }}
+                      className="bg-[#090806] px-3 py-1.5 text-xs font-black uppercase text-[#e9dfcb] hover:bg-black"
+                    >
+                      Chat with this article
+                    </button>
+                  )}
+                  {r.data.original && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setFullTextRecord(r)
+                      }}
+                      className="border-2 border-[#090806] px-3 py-1.5 text-xs font-black uppercase text-[#090806] hover:bg-[#e9dfcb]"
+                    >
+                      View full text
+                    </button>
+                  )}
+                  <a
+                    href={r.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="border-2 border-[#090806] px-3 py-1.5 text-xs font-black uppercase text-[#090806] hover:bg-[#e9dfcb]"
+                  >
+                    View on web
+                  </a>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDelete(r.id)
+                    }}
+                    className="text-xs text-red-600 hover:text-red-500 px-3 py-1.5"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </section>
+            )
           })}
         </section>
       ))}

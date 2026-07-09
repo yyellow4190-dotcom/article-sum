@@ -11,7 +11,7 @@ const inputClass =
 export default function Pending() {
   const [records, setRecords] = useState<ContentRecord[] | null>(null)
   const [fullTextRecord, setFullTextRecord] = useState<ContentRecord | null>(null)
-  const { defaults, refresh: refreshDefaults, updateActiveFolder } = usePipelineDefaults()
+  const { defaults, updateActiveFolder } = usePipelineDefaults()
 
   function refresh() {
     window.api?.listPending().then(setRecords)
@@ -20,18 +20,6 @@ export default function Pending() {
   useEffect(() => {
     refresh()
     return window.api?.onQueueUpdate(refresh)
-  }, [])
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'F5') {
-        e.preventDefault()
-        refresh()
-        refreshDefaults()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   async function handleApprove(id: number) {
@@ -47,11 +35,6 @@ export default function Pending() {
 
   async function handleCancel(id: number) {
     await window.api?.cancel(id)
-    refresh()
-  }
-
-  async function handleRegenerate(id: number) {
-    await window.api?.regenerate(id)
     refresh()
   }
 
@@ -87,12 +70,11 @@ export default function Pending() {
 
       {records?.map((r) => {
         const summary = r.data.summaries ? Object.values(r.data.summaries)[0] : undefined
-        const isRegenerating = r.data.processing && r.data.stage === 'Regenerating summary...'
         return (
-          <section key={r.id} className={`${cardClass} ${isRegenerating ? 'opacity-50 pointer-events-none' : ''}`}>
+          <section key={r.id} className={cardClass}>
             <div className="flex items-center gap-2 flex-wrap">
               {r.data.processing ? (
-                <span className="inline-block animate-pulse bg-[#090806] px-2 py-1 text-xs font-black uppercase text-[#e9dfcb]">
+                <span className="inline-block bg-[#090806] px-2 py-1 text-xs font-black uppercase text-[#e9dfcb]">
                   {r.data.stage ?? 'Processing...'}
                 </span>
               ) : (
@@ -113,17 +95,8 @@ export default function Pending() {
             <a href={r.url} target="_blank" rel="noreferrer" className="break-all border-y-2 border-[#090806] py-2 text-xs font-black uppercase text-[#090806] hover:bg-[#e9dfcb]">
               {r.url}
             </a>
-            {r.data.images && r.data.images.length > 0 && (
-              <div className="flex flex-row gap-2 overflow-x-auto pb-1">
-                {r.data.images.map((src, i) => (
-                  <img
-                    key={i}
-                    src={cachedImageSrc(src)}
-                    alt=""
-                    className="max-h-[200px] w-auto flex-shrink-0 border-2 border-[#090806] object-contain grayscale"
-                  />
-                ))}
-              </div>
+            {r.data.thumbnail && (
+              <img src={cachedImageSrc(r.data.thumbnail)} alt="" className="max-h-[200px] w-auto border-2 border-[#090806] object-contain grayscale" />
             )}
             {summary && <p className="whitespace-pre-wrap border-t-2 border-[#090806] pt-3 text-sm font-bold leading-relaxed text-[#090806]">{summary}</p>}
             {r.data.error && (
@@ -138,14 +111,6 @@ export default function Pending() {
                   className="px-3 py-1.5 text-xs font-black uppercase text-[#090806] hover:bg-[#e9dfcb]"
                 >
                   Show full article
-                </button>
-              )}
-              {r.data.original && !r.data.processing && (
-                <button
-                  onClick={() => handleRegenerate(r.id)}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 px-3 py-1.5"
-                >
-                  Regenerate
                 </button>
               )}
               {r.data.processing ? (
