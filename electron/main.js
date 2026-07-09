@@ -207,6 +207,11 @@ function registerIpcHandlers() {
   ipcMain.handle('settings:get', () => settingsStore.getSettings())
   ipcMain.handle('settings:sync', (_event, partial) => settingsStore.updateSettings(partial))
   ipcMain.handle('contents:list', (_event, status) => db.listByStatus(status))
+  ipcMain.handle('contents:process-url', async (_event, url) => {
+    if (!isAuthenticated) throw new Error('Sign in to create a brief.')
+    if (typeof url !== 'string' || !URL_RE.test(url.trim())) throw new Error('Invalid URL.')
+    void processLink(url.trim())
+  })
   ipcMain.handle('contents:related', (_event, id) => db.getRelated(id))
   ipcMain.handle('contents:approve', async (_event, id) => {
     const { activeFolder } = settingsStore.getSettings()

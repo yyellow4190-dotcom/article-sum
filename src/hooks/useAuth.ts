@@ -6,12 +6,16 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!window.api) {
+      setLoading(false)
+      return
+    }
     window.api
-      ?.authGetUser()
+      .authGetUser()
       .then((u) => setUser(u))
       .catch(() => setUser(null))
       .finally(() => setLoading(false))
-    return window.api?.onAuthChange((u) => setUser(u))
+    return window.api.onAuthChange((u) => setUser(u))
   }, [])
 
   async function signUp(email: string, password: string) {

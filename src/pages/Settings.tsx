@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react'
 import { LANGUAGES } from '../types'
 import type { SummaryOptions } from '../types'
 import { usePipelineDefaults } from '../hooks/usePipelineDefaults'
-
-const inputClass =
-  'bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500'
-const cardClass = 'bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex flex-col gap-3'
+import { useAuth } from '../hooks/useAuth'
 
 export default function Settings() {
   const { defaults, refresh, updateBackendUrl, updateFolders, updateDefaultOptions } = usePipelineDefaults()
+  const { user, signOut } = useAuth()
   const [newFolder, setNewFolder] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [location, setLocation] = useState('')
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -47,97 +49,66 @@ export default function Settings() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <h2 className="text-lg font-semibold text-slate-200">Settings</h2>
-
-      {defaults && (
-        <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-slate-200">Backend Configuration</h2>
-          <div className={cardClass}>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs text-slate-500">Backend URL & Port</label>
-              <input
-                value={defaults.backendUrl}
-                onChange={(e) => updateBackendUrl(e.target.value)}
-                placeholder="http://127.0.0.1:3000"
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          <h2 className="text-lg font-semibold text-slate-200">Pipeline defaults</h2>
-          <section className={`${cardClass} flex-row flex-wrap items-center gap-x-6 gap-y-3`}>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input
-                type="checkbox"
-                checked={defaults.defaultOptions.emoji}
-                onChange={(e) => handleOptionsChange({ ...defaults.defaultOptions, emoji: e.target.checked })}
-                className="accent-indigo-500"
-              />
-              Add emojis
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input
-                type="checkbox"
-                checked={defaults.defaultOptions.kidFriendly}
-                onChange={(e) => handleOptionsChange({ ...defaults.defaultOptions, kidFriendly: e.target.checked })}
-                className="accent-indigo-500"
-              />
-              Kid-friendly (simple words)
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              Summary language
-              <select
-                value={defaults.defaultOptions.language}
-                onChange={(e) =>
-                  handleOptionsChange({ ...defaults.defaultOptions, language: e.target.value as SummaryOptions['language'] })
-                }
-                className={inputClass}
-              >
-                {LANGUAGES.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-
-          <h2 className="text-lg font-semibold text-slate-200">Folders</h2>
-          <div className={cardClass}>
-            {defaults.folders.map((c, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  value={c}
-                  onChange={(e) => handleFolderRename(i, e.target.value)}
-                  className={`${inputClass} flex-1`}
-                />
-                <button
-                  onClick={() => handleFolderRemove(i)}
-                  className="text-xs text-red-400 hover:text-red-300 px-2"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-            <div className="flex items-center gap-2">
-              <input
-                value={newFolder}
-                onChange={(e) => setNewFolder(e.target.value)}
-                placeholder="New folder"
-                className={`${inputClass} flex-1`}
-              />
-              <button
-                onClick={handleFolderAdd}
-                className="text-xs bg-indigo-600 hover:bg-indigo-500 rounded-lg px-3 py-1.5 font-medium"
-              >
-                Add
-              </button>
-            </div>
-          </div>
+    <div className="profile-settings-shell">
+      <aside className="profile-panel">
+        <div className="profile-avatar">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+          </svg>
         </div>
-      )}
+        <h2>Clipbrief Reader</h2>
+        <p>{user?.email ?? 'Local preview'}</p>
+        <nav>
+          <button className="active">Personal information</button>
+          <button>Reading preferences</button>
+          <button>Categories</button>
+          {user && <button onClick={signOut}>Sign out</button>}
+        </nav>
+      </aside>
+
+      <section className="profile-content">
+        <header><span>ACCOUNT</span><h2>Profile Settings</h2></header>
+        <section className="profile-form-section">
+          <h3>Personal information</h3>
+          <div className="profile-fields">
+            <label>First name<input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="First name" /></label>
+            <label>Last name<input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Last name" /></label>
+            <label className="full">Email<input value={user?.email ?? 'preview@clipbrief.app'} readOnly /></label>
+            <label>Phone number<input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+1 000 000 0000" /></label>
+            <label>Location<input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="City, Country" /></label>
+          </div>
+        </section>
+        {defaults && (
+          <>
+            <section className="profile-form-section">
+              <h3>Reading preferences</h3>
+              <div className="profile-toggles">
+                <label><input type="checkbox" checked={defaults.defaultOptions.emoji} onChange={(e) => handleOptionsChange({ ...defaults.defaultOptions, emoji: e.target.checked })} />Add emojis</label>
+                <label><input type="checkbox" checked={defaults.defaultOptions.kidFriendly} onChange={(e) => handleOptionsChange({ ...defaults.defaultOptions, kidFriendly: e.target.checked })} />Use simple language</label>
+              </div>
+              <div className="profile-fields preference-fields">
+                <label>Summary language
+                  <select value={defaults.defaultOptions.language} onChange={(e) => handleOptionsChange({ ...defaults.defaultOptions, language: e.target.value as SummaryOptions['language'] })}>
+                    {LANGUAGES.map((language) => <option key={language.id} value={language.id}>{language.label}</option>)}
+                  </select>
+                </label>
+                <label>Backend URL<input value={defaults.backendUrl} onChange={(e) => updateBackendUrl(e.target.value)} placeholder="http://127.0.0.1:3000" /></label>
+              </div>
+            </section>
+
+            <section className="profile-form-section">
+              <h3>Categories</h3>
+              <div className="profile-category-list">
+                {defaults.folders.map((category, index) => (
+                  <div key={index}><input value={category} onChange={(e) => handleFolderRename(index, e.target.value)} /><button onClick={() => handleFolderRemove(index)}>Remove</button></div>
+                ))}
+                <div><input value={newFolder} onChange={(e) => setNewFolder(e.target.value)} placeholder="New category" /><button className="add" onClick={handleFolderAdd}>Add</button></div>
+              </div>
+            </section>
+          </>
+        )}
+      </section>
     </div>
   )
 }
-

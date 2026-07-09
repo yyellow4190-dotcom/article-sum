@@ -10,9 +10,11 @@ const inputClass =
 export default function Archive({
   onChatWithArticle,
   onOpenArticle,
+  variant = 'library',
 }: {
   onChatWithArticle: (id: number) => void
   onOpenArticle: (record: ContentRecord) => void
+  variant?: 'library' | 'favorites'
 }) {
   const [records, setRecords] = useState<ContentRecord[] | null>(null)
   const [search, setSearch] = useState('')
@@ -69,11 +71,95 @@ export default function Archive({
   }, [records, search, categoryFilter, folderFilter])
 
   if (!window.api) {
-    return <p className="text-slate-500 text-sm">This feature is only available in the Electron app.</p>
+    if (variant === 'favorites') {
+      return (
+        <div className="favorites-showcase favorites-preview">
+          <article className="favorite-feature">
+            <div className="favorite-art" />
+            <div className="favorite-copy"><span>FEATURED</span><h3>Your favorite articles</h3><p>Saved stories will appear here with their key summaries.</p></div>
+          </article>
+          <div className="favorite-grid">
+            <article><div className="favorite-thumb" /><span>RECENTLY SAVED</span><h3>Article title</h3><p>A short summary of the saved article appears here.</p></article>
+            <article><div className="favorite-thumb" /><span>RECENTLY SAVED</span><h3>Article title</h3><p>A short summary of the saved article appears here.</p></article>
+          </div>
+        </div>
+      )
+    }
+    return (
+      <div className="category-dashboard category-preview">
+        <section className="category-section">
+          <header><h3>All categories</h3></header>
+          <div className="category-folder-grid category-all-grid">
+            {['AI & Technology', 'Business', 'Culture', 'Science', 'Design', 'World'].map((category, index) => (
+              <article className="category-folder" key={category}>
+                <button>•••</button><h3>{category}</h3><small>{12 + index * 4} saved articles</small>
+                <p className="category-latest"><span>LATEST</span>{['AI reshapes everyday work', 'Markets enter a new chapter', 'The culture of small teams'][index % 3]}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    )
   }
 
   if (records === null) {
     return <p className="text-slate-500 text-sm">Loading...</p>
+  }
+
+  if (variant === 'favorites') {
+    const [featured, ...rest] = filtered
+    const summaryFor = (record: ContentRecord) =>
+      record.data.summaries ? Object.values(record.data.summaries)[0] : undefined
+
+    if (!featured) return <p className="text-slate-500 text-sm">No favorite articles yet.</p>
+
+    return (
+      <div className="favorites-showcase">
+        <article className="favorite-feature" onClick={() => onOpenArticle(featured)}>
+          {featured.data.images?.[0] ? <img src={cachedImageSrc(featured.data.images[0])} alt="" /> : <div className="favorite-art" />}
+          <div className="favorite-copy">
+            <span>{featured.data.category ?? 'FEATURED'}</span>
+            <h3>{featured.data.title ?? 'Saved article'}</h3>
+            <p>{summaryFor(featured) ?? featured.url}</p>
+          </div>
+        </article>
+        <div className="favorite-grid">
+          {rest.slice(0, 2).map((record) => (
+            <article key={record.id} onClick={() => onOpenArticle(record)}>
+              {record.data.images?.[0] ? <img className="favorite-thumb" src={cachedImageSrc(record.data.images[0])} alt="" /> : <div className="favorite-thumb" />}
+              <span>RECENTLY SAVED</span>
+              <h3>{record.data.title ?? 'Saved article'}</h3>
+              <p>{summaryFor(record) ?? record.url}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (variant === 'library') {
+    const categoryGroups = new Map<string, ContentRecord[]>()
+    for (const record of filtered) {
+      const category = record.data.category ?? 'Uncategorized'
+      if (!categoryGroups.has(category)) categoryGroups.set(category, [])
+      categoryGroups.get(category)!.push(record)
+    }
+
+    return (
+      <div className="category-dashboard">
+        <section className="category-section">
+          <header><h3>All categories</h3></header>
+          <div className="category-folder-grid category-all-grid">
+            {[...categoryGroups.entries()].map(([category, articles]) => (
+              <article className="category-folder" key={category} onClick={() => onOpenArticle(articles[0])}>
+                <button onClick={(event) => event.stopPropagation()}>•••</button><h3>{category}</h3><small>{articles.length} saved articles</small>
+                <p className="category-latest"><span>LATEST</span>{articles[0].data.title ?? 'Saved article'}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    )
   }
 
   const groups = new Map<string, ContentRecord[]>()

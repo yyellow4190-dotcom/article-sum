@@ -70,7 +70,7 @@ export default function ArchiveDetail({
               title={record.data.embeddingError}
               className="inline-block bg-amber-900/50 text-amber-400 text-xs px-2 py-1 rounded-full"
             >
-              ⚠ 관련 기사 검색 제외
+              ⚠ Excluded from related articles
             </span>
           )}
           <span className="text-xs text-slate-600 ml-auto">{new Date(record.createdAt).toLocaleString('en-US')}</span>
@@ -92,7 +92,7 @@ export default function ArchiveDetail({
 
         {related.length > 0 && (
           <div className="flex flex-col gap-2">
-            <h4 className="text-xs font-semibold text-slate-400">관련 기사</h4>
+            <h4 className="text-xs font-semibold text-slate-400">Related articles</h4>
             <div className="flex flex-row gap-3 overflow-x-auto pb-1">
               {related.map((r) => {
                 const relatedSummary = r.data.summaries ? Object.values(r.data.summaries)[0] : undefined

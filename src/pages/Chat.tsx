@@ -188,12 +188,29 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
   }
 
   if (!window.api) {
-    return <p className="text-slate-500 text-sm p-6">This feature is only available in the Electron app.</p>
+    return (
+      <div className="chat-workspace chat-preview has-chat">
+        <aside className="chat-sessions">
+          <div className="chat-side-title"><span>CONVERSATIONS</span><strong>Article briefs</strong></div>
+          <button className="chat-session active"><i>01</i><div><b>The future of independent media</b><span>How will this change publishing?</span></div></button>
+          <button className="chat-session"><i>02</i><div><b>Designing calmer technology</b><span>Summarize the key argument</span></div></button>
+        </aside>
+        <section className="chat-main">
+          <header className="chat-header"><span>ARTICLE CONVERSATION</span><h2>Chatbot</h2></header>
+          <div className="chat-messages">
+            <div className="chat-message assistant">Ask me anything about this saved article.</div>
+            <div className="chat-message user">What is the main idea?</div>
+            <div className="chat-message assistant">The article argues that smaller, reader-supported publications can build stronger trust through focused reporting and direct relationships.</div>
+          </div>
+          <div className="chat-composer"><textarea placeholder="Ask a question about the article..." rows={1} /><button>Send</button></div>
+        </section>
+      </div>
+    )
   }
 
   return (
-    <div className="h-full flex">
-      <aside className="w-[26%] max-w-xs min-w-[220px] border-r border-slate-800 bg-slate-900/50 flex flex-col overflow-y-auto">
+    <div className={`h-full flex chat-workspace ${selectedArticle ? 'has-chat' : ''}`}>
+      <aside className="w-[26%] max-w-xs min-w-[220px] border-r border-slate-800 bg-slate-900/50 flex flex-col overflow-y-auto chat-sessions">
         {sidebarIds.length === 0 && (
           <p className="text-slate-500 text-xs p-4">
             Start a chat by clicking "Chat with this article" in Archive.
@@ -252,14 +269,12 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
         })}
       </aside>
 
-      <section className="flex-1 flex flex-col min-w-0">
+      <section className="flex-1 flex flex-col min-w-0 chat-main">
         {selectedArticle ? (
           <>
-            <header className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b-2 border-indigo-500/50 shadow-[0_4px_16px_-6px_rgba(99,102,241,0.4)] flex-wrap">
+            <header className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b-2 border-indigo-500/50 shadow-[0_4px_16px_-6px_rgba(99,102,241,0.4)] flex-wrap chat-header">
               <div className="flex flex-col min-w-0 gap-0.5">
-                {selectedArticle.data.title && (
-                  <span className="text-sm font-semibold text-slate-100 truncate">{selectedArticle.data.title}</span>
-                )}
+                <span className="text-sm font-semibold text-slate-100 truncate chatbot-title">Chatbot</span>
                 <a
                   href={selectedArticle.url}
                   target="_blank"
@@ -271,12 +286,12 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 chat-messages">
               {displayMessages.map((m, i) => (
                 <div
                   key={i}
                   className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
-                    m.role === 'user' ? 'self-end bg-indigo-600 text-white' : 'self-start bg-slate-800 text-slate-100'
+                    m.role === 'user' ? 'self-end bg-indigo-600 text-white chat-message user' : 'self-start bg-slate-800 text-slate-100 chat-message assistant'
                   }`}
                 >
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
@@ -285,7 +300,7 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
                 </div>
               ))}
               {sending && (
-                <div className="self-start max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed bg-slate-800 text-slate-100">
+                <div className="self-start max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed bg-slate-800 text-slate-100 chat-message assistant">
                   {streamingText ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
                       {streamingText}
@@ -303,7 +318,7 @@ export default function Chat({ initialContentId }: { initialContentId: number | 
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="shrink-0 p-4">
+            <div className="shrink-0 p-4 chat-composer-wrap">
               <div className="max-w-2xl mx-auto flex items-end gap-2 bg-slate-900 border border-slate-700 rounded-3xl px-4 py-2">
                 <textarea
                   value={draft}

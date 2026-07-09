@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('api', {
   syncSettings: (partial) => ipcRenderer.invoke('settings:sync', partial),
   listPending: () => ipcRenderer.invoke('contents:list', 'pending'),
   listApproved: () => ipcRenderer.invoke('contents:list', 'approved'),
+  processUrl: (url) => ipcRenderer.invoke('contents:process-url', url),
   approve: (id) => ipcRenderer.invoke('contents:approve', id),
   discard: (id) => ipcRenderer.invoke('contents:discard', id),
   cancel: (id) => ipcRenderer.invoke('contents:cancel', id),

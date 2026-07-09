@@ -29,7 +29,7 @@ export default function Login() {
   return (
     <div className="h-full flex items-center justify-center p-6">
       <form onSubmit={handleSubmit} className="w-full max-w-sm bg-slate-900/50 border border-slate-800 rounded-xl p-6 flex flex-col gap-4">
-        <h1 className="text-xl font-bold text-center">{mode === 'signIn' ? 'Sign in' : 'Sign up'}</h1>
+        <h1 className="text-lg font-bold text-center">{mode === 'signIn' ? 'Sign in' : 'Sign up'}</h1>
         <div className="flex flex-col gap-2">
           <label className="text-xs text-slate-500">Email</label>
           <input
@@ -55,7 +55,7 @@ export default function Login() {
         <button
           type="submit"
           disabled={busy}
-          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg px-3 py-2 text-sm font-medium"
+          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-lg px-3 py-2 text-xs font-normal"
         >
           {mode === 'signIn' ? 'Sign in' : 'Sign up'}
         </button>
@@ -65,7 +65,7 @@ export default function Login() {
             setError(null)
             setMode((m) => (m === 'signIn' ? 'signUp' : 'signIn'))
           }}
-          className="text-xs text-slate-400 hover:text-slate-200"
+          className="text-[11px] text-slate-400 hover:text-slate-200"
         >
           {mode === 'signIn' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
         </button>

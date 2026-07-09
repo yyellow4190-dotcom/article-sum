@@ -65,6 +65,7 @@ export interface ElectronApi {
   syncSettings: (partial: Partial<PipelineSettings>) => Promise<PipelineSettings>
   listPending: () => Promise<ContentRecord[]>
   listApproved: () => Promise<ContentRecord[]>
+  processUrl: (url: string) => Promise<void>
   approve: (id: number) => Promise<void>
   discard: (id: number) => Promise<void>
   cancel: (id: number) => Promise<void>
