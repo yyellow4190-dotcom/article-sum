@@ -1,4 +1,4 @@
-import type { ApiKeys, Models, Provider, SummaryOptions } from './index'
+import type { Provider, SummaryOptions } from './index'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -19,6 +19,11 @@ export interface ChatSessionSummary {
   lastMessage: string | null
 }
 
+export interface AuthUser {
+  id: string
+  email: string | null
+}
+
 export interface ChatEvent {
   type: 'chunk' | 'done' | 'error'
   contentId: number
@@ -27,13 +32,10 @@ export interface ChatEvent {
 }
 
 export interface PipelineSettings {
-  apiKeys: ApiKeys
-  models: Models
-  defaultProvider: Provider
+  backendUrl: string
   defaultOptions: SummaryOptions
   categories: string[]
   activeFolder: string | null
-  supabase: { url: string; anonKey: string }
 }
 
 export interface ContentRecord {
@@ -48,9 +50,10 @@ export interface ContentRecord {
     summaries?: Record<string, string>
     processing?: boolean
     stage?: string
-    thumbnail?: string | null
+    images?: string[]
     error?: string
     folder?: string | null
+    embeddingError?: string
   }
   createdAt: string
 }
@@ -63,11 +66,18 @@ export interface ElectronApi {
   approve: (id: number) => Promise<void>
   discard: (id: number) => Promise<void>
   cancel: (id: number) => Promise<void>
+  regenerate: (id: number) => Promise<void>
+  getRelated: (id: number) => Promise<ContentRecord[]>
   onQueueUpdate: (callback: () => void) => () => void
+  authSignUp: (email: string, password: string) => Promise<AuthUser | null>
+  authSignIn: (email: string, password: string) => Promise<AuthUser | null>
+  authSignOut: () => Promise<void>
+  authGetUser: () => Promise<AuthUser | null>
+  onAuthChange: (callback: (user: AuthUser | null) => void) => () => void
   chatGetSession: (contentId: number) => Promise<ChatSession>
   chatListSessions: () => Promise<ChatSessionSummary[]>
   chatDeleteSession: (contentId: number) => Promise<void>
-  chatSend: (contentId: number, payload: { text: string; provider: Provider; articleText: string }) => Promise<void>
+  chatSend: (contentId: number, payload: { text: string; articleText: string }) => Promise<void>
   onChatEvent: (callback: (event: ChatEvent) => void) => () => void
 }
 

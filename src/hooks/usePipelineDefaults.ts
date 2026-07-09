@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import type { Provider, SummaryOptions } from '../types'
+import type { SummaryOptions } from '../types'
 
 interface PipelineDefaults {
-  defaultProvider: Provider
+  backendUrl: string
   defaultOptions: SummaryOptions
   categories: string[]
   activeFolder: string | null
@@ -11,20 +11,24 @@ interface PipelineDefaults {
 export function usePipelineDefaults() {
   const [defaults, setDefaults] = useState<PipelineDefaults | null>(null)
 
-  useEffect(() => {
+  function refresh() {
     window.api?.getSettings().then((s) =>
       setDefaults({
-        defaultProvider: s.defaultProvider,
+        backendUrl: s.backendUrl,
         defaultOptions: s.defaultOptions,
         categories: s.categories,
         activeFolder: s.activeFolder,
       })
     )
+  }
+
+  useEffect(() => {
+    refresh()
   }, [])
 
-  function updateDefaultProvider(defaultProvider: Provider) {
-    setDefaults((prev) => (prev ? { ...prev, defaultProvider } : prev))
-    window.api?.syncSettings({ defaultProvider })
+  function updateBackendUrl(backendUrl: string) {
+    setDefaults((prev) => (prev ? { ...prev, backendUrl } : prev))
+    window.api?.syncSettings({ backendUrl })
   }
 
   function updateDefaultOptions(defaultOptions: SummaryOptions) {
@@ -42,5 +46,6 @@ export function usePipelineDefaults() {
     window.api?.syncSettings({ activeFolder })
   }
 
-  return { defaults, updateDefaultProvider, updateDefaultOptions, updateCategories, updateActiveFolder }
+  return { defaults, refresh, updateBackendUrl, updateDefaultOptions, updateCategories, updateActiveFolder }
 }
+

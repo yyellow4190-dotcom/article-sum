@@ -1,66 +1,58 @@
-const fs = require('fs')
-const path = require('path')
-const { app } = require('electron')
+const db = require('./db')
 
-let cache = null
-
-function chatPath() {
-  return path.join(app.getPath('userData'), 'chats.json')
-}
-
-function load() {
-  if (cache) return cache
-  const file = chatPath()
-  if (fs.existsSync(file)) {
-    cache = JSON.parse(fs.readFileSync(file, 'utf-8'))
-  } else {
-    cache = { sessions: {} }
+async function getSession(contentId) {
+  const { data, error } = await db
+    .getClient()
+    .from('chat_sessions')
+    .select('messages, provider, updated_at')
+    .eq('content_id', contentId)
+    .maybeSingle()
+  if (error) throw error
+  return {
+    messages: data?.messages ?? [],
+    provider: data?.provider ?? null,
+    updatedAt: data?.updated_at ?? null,
   }
-  return cache
 }
 
-function save() {
-  fs.writeFileSync(chatPath(), JSON.stringify(cache, null, 2))
-}
-
-function getSession(contentId) {
-  const store = load()
-  return store.sessions[contentId] ?? { messages: [], provider: null, updatedAt: null }
-}
-
-function listSessions() {
-  const store = load()
-  return Object.entries(store.sessions).map(([contentId, session]) => ({
-    contentId: Number(contentId),
-    provider: session.provider,
-    updatedAt: session.updatedAt,
-    lastMessage: session.messages.length ? session.messages[session.messages.length - 1].content : null,
+async function listSessions() {
+  const { data, error } = await db.getClient().from('chat_sessions').select('content_id, messages, provider, updated_at')
+  if (error) throw error
+  return data.map((row) => ({
+    contentId: row.content_id,
+    provider: row.provider,
+    updatedAt: row.updated_at,
+    lastMessage: row.messages.length ? row.messages[row.messages.length - 1].content : null,
   }))
 }
 
-function appendMessage(contentId, message) {
-  const store = load()
-  const key = String(contentId)
-  const session = store.sessions[key] ?? { messages: [], provider: null, updatedAt: null }
-  session.messages.push(message)
-  session.updatedAt = message.createdAt
-  store.sessions[key] = session
-  save()
+async function appendMessage(contentId, message) {
+  const client = db.getClient()
+  const { data, error: fetchError } = await client
+    .from('chat_sessions')
+    .select('messages')
+    .eq('content_id', contentId)
+    .maybeSingle()
+  if (fetchError) throw fetchError
+
+  const messages = [...(data?.messages ?? []), message]
+  const { error } = await client
+    .from('chat_sessions')
+    .upsert({ content_id: contentId, messages, updated_at: message.createdAt }, { onConflict: 'content_id' })
+  if (error) throw error
 }
 
-function setProvider(contentId, provider) {
-  const store = load()
-  const key = String(contentId)
-  const session = store.sessions[key] ?? { messages: [], provider: null, updatedAt: null }
-  session.provider = provider
-  store.sessions[key] = session
-  save()
+async function setProvider(contentId, provider) {
+  const { error } = await db
+    .getClient()
+    .from('chat_sessions')
+    .upsert({ content_id: contentId, provider }, { onConflict: 'content_id' })
+  if (error) throw error
 }
 
-function deleteSession(contentId) {
-  const store = load()
-  delete store.sessions[String(contentId)]
-  save()
+async function deleteSession(contentId) {
+  const { error } = await db.getClient().from('chat_sessions').delete().eq('content_id', contentId)
+  if (error) throw error
 }
 
 module.exports = { getSession, listSessions, appendMessage, setProvider, deleteSession }

@@ -1,10 +1,7 @@
-import { useState } from 'react'
-import { LANGUAGES, PROVIDERS } from '../types'
-import type { Provider, SummaryOptions } from '../types'
-import { useApiKeys } from '../hooks/useApiKeys'
-import { useModels } from '../hooks/useModels'
+import { useEffect, useState } from 'react'
+import { LANGUAGES } from '../types'
+import type { SummaryOptions } from '../types'
 import { usePipelineDefaults } from '../hooks/usePipelineDefaults'
-import { useSupabaseConfig } from '../hooks/useSupabaseConfig'
 
 const inputClass =
   'bg-[#e9dfcb] border-2 border-[#090806] px-3 py-2 text-sm font-black text-[#090806] placeholder:text-[#090806]/55 focus:outline-none'
@@ -12,11 +9,20 @@ const cardClass =
   'bg-[#d9cfbc] border-2 border-[#090806] p-4 flex flex-col gap-3'
 
 export default function Settings() {
-  const { keys, updateKey } = useApiKeys()
-  const { models, updateModel } = useModels()
-  const { defaults, updateCategories, updateDefaultProvider, updateDefaultOptions } = usePipelineDefaults()
-  const { config: supabaseConfig, updateConfig: updateSupabaseConfig } = useSupabaseConfig()
+  const { defaults, refresh, updateBackendUrl, updateCategories, updateDefaultOptions } = usePipelineDefaults()
   const [newCategory, setNewCategory] = useState('')
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'F5') {
+        e.preventDefault()
+        refresh()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function handleOptionsChange(o: SummaryOptions) {
     updateDefaultOptions(o)
@@ -47,6 +53,19 @@ export default function Settings() {
 
       {defaults && (
         <div className="flex flex-col gap-4">
+          <h2 className="font-poster text-4xl uppercase leading-none text-[#090806]">Backend Configuration</h2>
+          <div className={cardClass}>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-black uppercase text-[#090806]">Backend URL & Port</label>
+              <input
+                value={defaults.backendUrl}
+                onChange={(e) => updateBackendUrl(e.target.value)}
+                placeholder="http://127.0.0.1:3000"
+                className={inputClass}
+              />
+            </div>
+          </div>
+
           <h2 className="font-poster text-4xl uppercase leading-none text-[#090806]">Pipeline Defaults</h2>
           <section className={`${cardClass} flex-row flex-wrap items-center gap-x-6 gap-y-3`}>
             <label className="flex items-center gap-2 text-sm font-black uppercase text-[#090806]">
@@ -79,20 +98,6 @@ export default function Settings() {
                 {LANGUAGES.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="ml-auto flex items-center gap-2 text-sm font-black uppercase text-[#090806]">
-              Provider
-              <select
-                value={defaults.defaultProvider}
-                onChange={(e) => updateDefaultProvider(e.target.value as Provider)}
-                className={inputClass}
-              >
-                {PROVIDERS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
                   </option>
                 ))}
               </select>
@@ -133,58 +138,6 @@ export default function Settings() {
           </div>
         </div>
       )}
-
-      {supabaseConfig && (
-        <div className="flex flex-col gap-4">
-          <h2 className="font-poster text-4xl uppercase leading-none text-[#090806]">Database</h2>
-          <div className={cardClass}>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-black uppercase text-[#090806]">Project URL</label>
-              <input
-                value={supabaseConfig.url}
-                onChange={(e) => updateSupabaseConfig({ url: e.target.value })}
-                placeholder="https://xxxxx.supabase.co"
-                className={inputClass}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-black uppercase text-[#090806]">Anon Key</label>
-              <input
-                type="password"
-                value={supabaseConfig.anonKey}
-                onChange={(e) => updateSupabaseConfig({ anonKey: e.target.value })}
-                className={inputClass}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-4">
-        {PROVIDERS.map((p) => (
-          <div key={p.id} className={cardClass}>
-            <span className="font-poster text-4xl uppercase leading-none text-[#090806]">{p.label}</span>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-black uppercase text-[#090806]">API Key</label>
-              <input
-                type="password"
-                placeholder={`${p.label} API Key`}
-                value={keys[p.id]}
-                onChange={(e) => updateKey(p.id, e.target.value)}
-                className={inputClass}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-black uppercase text-[#090806]">Model Name</label>
-              <input
-                value={models[p.id]}
-                onChange={(e) => updateModel(p.id, e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }

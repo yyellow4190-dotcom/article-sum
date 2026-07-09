@@ -8,10 +8,21 @@ contextBridge.exposeInMainWorld('api', {
   approve: (id) => ipcRenderer.invoke('contents:approve', id),
   discard: (id) => ipcRenderer.invoke('contents:discard', id),
   cancel: (id) => ipcRenderer.invoke('contents:cancel', id),
+  regenerate: (id) => ipcRenderer.invoke('contents:regenerate', id),
+  getRelated: (id) => ipcRenderer.invoke('contents:related', id),
   onQueueUpdate: (callback) => {
     const listener = () => callback()
     ipcRenderer.on('queue:updated', listener)
     return () => ipcRenderer.removeListener('queue:updated', listener)
+  },
+  authSignUp: (email, password) => ipcRenderer.invoke('auth:signUp', email, password),
+  authSignIn: (email, password) => ipcRenderer.invoke('auth:signIn', email, password),
+  authSignOut: () => ipcRenderer.invoke('auth:signOut'),
+  authGetUser: () => ipcRenderer.invoke('auth:getUser'),
+  onAuthChange: (callback) => {
+    const listener = (_event, user) => callback(user)
+    ipcRenderer.on('auth:changed', listener)
+    return () => ipcRenderer.removeListener('auth:changed', listener)
   },
   chatGetSession: (contentId) => ipcRenderer.invoke('chat:get', contentId),
   chatListSessions: () => ipcRenderer.invoke('chat:list'),

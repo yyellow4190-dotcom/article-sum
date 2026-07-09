@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Pending from './pages/Pending'
 import Archive from './pages/Archive'
+import ArchiveDetail from './pages/ArchiveDetail'
 import Settings from './pages/Settings'
 import Chat from './pages/Chat'
-import { useApiKeys } from './hooks/useApiKeys'
-import { useModels } from './hooks/useModels'
+import Login from './pages/Login'
+import { useAuth } from './hooks/useAuth'
+import type { ContentRecord } from './types/global'
 
-type Page = 'pending' | 'archive' | 'chat' | 'settings'
+type Page = 'pending' | 'archive' | 'archive-detail' | 'chat' | 'settings'
 type IconName = 'folder' | 'search' | 'star' | 'profile' | 'menu' | 'link'
 
 const NAV_ITEMS: { id: Page; label: string; icon: IconName }[] = [
@@ -105,19 +107,21 @@ export default function App() {
   const [chatTarget, setChatTarget] = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [newsLink, setNewsLink] = useState('')
-  const { keys } = useApiKeys()
-  const { models } = useModels()
-
-  // Electron 메인 프로세스는 클립보드 파이프라인에서 같은 API 키/모델을 쓴다.
-  // 렌더러 localStorage 값이 바뀔 때마다 main으로 동기화.
-  useEffect(() => {
-    window.api?.syncSettings({ apiKeys: keys, models })
-  }, [keys, models])
+  const [archiveDetail, setArchiveDetail] = useState<ContentRecord | null>(null)
+  const { user, loading, signOut } = useAuth()
 
   function handleChatWithArticle(contentId: number) {
     setChatTarget(contentId)
     setPage('chat')
   }
+
+  function handleOpenArchiveArticle(record: ContentRecord) {
+    setArchiveDetail(record)
+    setPage('archive-detail')
+  }
+
+
+  if (loading) return null
 
   return (
     <div className="paper-grain h-screen bg-[#d9cfbc] text-[#090806] overflow-hidden">
@@ -138,10 +142,10 @@ export default function App() {
               <Icon name="menu" />
               {sidebarOpen && <span className="font-poster text-2xl uppercase leading-none">Menu</span>}
             </button>
-
             <nav className="flex w-full flex-1 flex-col gap-4">
               {NAV_ITEMS.map((item) => {
-                const isActive = page === item.id
+                const isActive =
+                  page === item.id || (item.id === 'archive' && page === 'archive-detail')
                 return (
                   <button
                     key={item.id}
@@ -161,6 +165,15 @@ export default function App() {
                 )
               })}
             </nav>
+            {user && (
+              <button
+                onClick={signOut}
+                title={user.email ?? undefined}
+                className="w-full truncate border-2 border-[#2b2821] px-2 py-2 text-xs font-black uppercase text-[#d9cfbc] hover:border-[#e9dfcb] hover:text-[#e9dfcb]"
+              >
+                {sidebarOpen ? `Sign out (${user.email ?? 'account'})` : 'Exit'}
+              </button>
+            )}
           </div>
         </aside>
 
@@ -184,13 +197,27 @@ export default function App() {
             </header>
 
             <div className={`ui-copy min-h-0 flex-1 ${page === 'chat' ? '' : 'overflow-y-auto'}`}>
-              {page === 'chat' ? (
+              {page !== 'settings' && !user ? (
+                <Login />
+              ) : page === 'chat' ? (
                 <Chat initialContentId={chatTarget} />
               ) : (
                 <div className="grid min-h-full grid-cols-1 gap-6 px-5 py-6 sm:px-7 xl:grid-cols-[minmax(0,1fr)_21rem]">
                   <section className="min-w-0">
                     {page === 'pending' && <Pending />}
-                    {page === 'archive' && <Archive onChatWithArticle={handleChatWithArticle} />}
+                    {page === 'archive' && (
+                      <Archive
+                        onChatWithArticle={handleChatWithArticle}
+                        onOpenArticle={handleOpenArchiveArticle}
+                      />
+                    )}
+                    {page === 'archive-detail' && archiveDetail && (
+                      <ArchiveDetail
+                        record={archiveDetail}
+                        onBack={() => setPage('archive')}
+                        onChatWithArticle={handleChatWithArticle}
+                      />
+                    )}
                     {page === 'settings' && <Settings />}
                   </section>
                   <aside className="hidden xl:flex xl:flex-col xl:gap-4">
